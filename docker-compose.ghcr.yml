@@ -1,0 +1,46 @@
+# Production Docker Compose for GHCR deployment
+# Usage: docker compose -f docker-compose.ghcr.yml up -d
+#
+# Required env vars:
+#   CLAWDBOT_GATEWAY_TOKEN - Gateway authentication token
+#
+# Optional env vars:
+#   CLAWDBOT_VERSION - Image tag (default: latest)
+#   CLAWDBOT_GATEWAY_PORT - Gateway port (default: 18789)
+#   CLAWDBOT_BRIDGE_PORT - Bridge port (default: 18790)
+#   CLAWDBOT_GATEWAY_BIND - Bind mode (default: lan)
+#   CLAWDBOT_CONFIG_DIR - Config directory (default: ./data/config)
+#   CLAWDBOT_WORKSPACE_DIR - Workspace directory (default: ./data/workspace)
+#   ANTHROPIC_API_KEY - Anthropic API key
+#   OPENAI_API_KEY - OpenAI API key
+
+services:
+  clawdbot-gateway:
+    image: ghcr.io/andyeskridge/clawdbot:${CLAWDBOT_VERSION:-latest}
+    container_name: clawdbot-gateway
+    restart: unless-stopped
+    init: true
+    environment:
+      HOME: /home/node
+      NODE_ENV: production
+      TERM: xterm-256color
+      CLAWDBOT_GATEWAY_TOKEN: ${CLAWDBOT_GATEWAY_TOKEN:?Gateway token required}
+      CLAWDBOT_GATEWAY_BIND: ${CLAWDBOT_GATEWAY_BIND:-lan}
+      CLAWDBOT_GATEWAY_PORT: ${CLAWDBOT_GATEWAY_PORT:-18789}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    volumes:
+      - ${CLAWDBOT_CONFIG_DIR:-./data/config}:/home/node/.clawdbot
+      - ${CLAWDBOT_WORKSPACE_DIR:-./data/workspace}:/home/node/clawd
+    ports:
+      - "${CLAWDBOT_GATEWAY_PORT:-18789}:18789"
+      - "${CLAWDBOT_BRIDGE_PORT:-18790}:18790"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 2G

@@ -222,6 +222,18 @@ export function createGatewayHttpServer(opts: {
     // Don't interfere with WebSocket upgrades; ws handles the 'upgrade' event.
     if (String(req.headers.upgrade ?? "").toLowerCase() === "websocket") return;
 
+    // Health check endpoint for Docker/monitoring - no auth required
+    const url = new URL(req.url ?? "/", `http://localhost`);
+    if (
+      req.method === "GET" &&
+      (url.pathname === "/health" || url.pathname === "/healthz")
+    ) {
+      res.statusCode = 200;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ ok: true, ts: Date.now() }));
+      return;
+    }
+
     void (async () => {
       if (await handleHooksRequest(req, res)) return;
       if (openAiChatCompletionsEnabled) {

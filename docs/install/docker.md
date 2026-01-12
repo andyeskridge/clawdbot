@@ -434,3 +434,78 @@ Example:
 - Container not running: it will auto-create per session on demand.
 - Permission errors in sandbox: set `docker.user` to a UID:GID that matches your
   mounted workspace ownership (or chown the workspace folder).
+
+## Deploying from GHCR
+
+Pre-built images are available on GitHub Container Registry for quick deployment to remote hosts.
+
+### Quick Start (Remote Host)
+
+On your target host:
+
+```bash
+# Create deployment directory
+mkdir -p ~/clawdbot && cd ~/clawdbot
+
+# Download compose file
+curl -O https://raw.githubusercontent.com/andyeskridge/clawdbot/main/docker-compose.ghcr.yml
+mv docker-compose.ghcr.yml docker-compose.yml
+
+# Generate token and create .env
+echo "CLAWDBOT_GATEWAY_TOKEN=$(openssl rand -hex 32)" > .env
+
+# Start
+docker compose up -d
+
+# Check health
+curl http://localhost:18789/healthz
+```
+
+### One-Command Deployment
+
+From the clawdbot repo, deploy to any host with SSH access:
+
+```bash
+./scripts/docker/deploy-host.sh user@my-server
+```
+
+This copies the compose file, generates a token, and starts the gateway.
+
+### Access via SSH Tunnel
+
+The gateway binds to `lan` by default. For secure remote access:
+
+```bash
+ssh -N -L 18789:127.0.0.1:18789 user@my-server
+```
+
+Then open `http://localhost:18789` locally.
+
+### Building and Pushing (Maintainers)
+
+From the repository root:
+
+```bash
+# Login to GHCR
+echo $GITHUB_TOKEN | docker login ghcr.io -u YOUR_USERNAME --password-stdin
+
+# Build
+./scripts/docker/build-ghcr.sh v1.2.3
+
+# Push
+./scripts/docker/push-ghcr.sh v1.2.3
+```
+
+### Environment Variables
+
+See `.env.ghcr.example` for all available options:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `CLAWDBOT_GATEWAY_TOKEN` | Yes | Gateway authentication token |
+| `ANTHROPIC_API_KEY` | No | Anthropic API key |
+| `OPENAI_API_KEY` | No | OpenAI API key |
+| `CLAWDBOT_VERSION` | No | Image tag (default: `latest`) |
+| `CLAWDBOT_GATEWAY_BIND` | No | Bind mode (default: `lan`) |
+| `CLAWDBOT_CONFIG_DIR` | No | Config directory (default: `./data/config`) |
+| `CLAWDBOT_WORKSPACE_DIR` | No | Workspace directory (default: `./data/workspace`) |
